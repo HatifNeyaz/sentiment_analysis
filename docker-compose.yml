@@ -1,0 +1,118 @@
+# docker-compose.yml
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    networks:
+      - sentiment-net
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    networks:
+      - sentiment-net
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:29092", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      # --- THIS IS THE CORRECTED CONFIGURATION ---
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # -----------------------------------------
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CREATE_TOPICS: "twitter-stream:1:1"
+
+  mongo:
+    image: mongo:5.0
+    container_name: mongo
+    networks:
+      - sentiment-net
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    networks:
+      - sentiment-net
+    depends_on:
+      - mongo
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: root
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_BASICAUTH_USERNAME: root
+      ME_CONFIG_BASICAUTH_PASSWORD: password
+      ME_CONFIG_MONGODB_AUTH_DATABASE: admin
+
+  producer:
+    build: ./producer
+    container_name: producer
+    networks:
+      - sentiment-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+    # Mount the local 'data' directory to the container's '/app/data'
+    - ./data:/app/data
+
+  consumer:
+    build: ./consumer
+    container_name: consumer
+    networks:
+      - sentiment-net
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    volumes:
+      - ./models:/app/models
+
+  api:
+    build: ./api
+    container_name: api
+    networks:
+      - sentiment-net
+    depends_on:
+      - mongo
+    ports:
+      - "5000:5000"
+
+  dashboard:
+    build: ./dashboard
+    container_name: dashboard
+    networks:
+      - sentiment-net
+    depends_on:
+      - api
+    ports:
+      - "8501:8501"
+
+networks:
+  sentiment-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
