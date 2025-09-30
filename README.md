@@ -64,4 +64,4 @@ Press Ctrl+C in the terminal where the application is running, and then run:
 docker-compose down
 
 The dashboard looks something like this:
-![Dashboard Image](images/dashboard.PNG)
+![Dashboard Image](image/dashboard.PNG)
