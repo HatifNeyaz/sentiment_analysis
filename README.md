@@ -16,12 +16,14 @@ Step 1: Clone the Repository
 Open a terminal and clone this GitHub repository to your local machine:
 
 Type code below: 
-''' git clone https://github.com/HatifNeyaz/sentiment_analysis '''
+``` bash
+git clone https://github.com/HatifNeyaz/sentiment_analysis
+```
 
 
 Your final folder structure must look like this:
 
-'''
+``` bash
 realtime-sentiment/
 ├── data/
 │   └── twitter_training.csv
@@ -33,7 +35,7 @@ realtime-sentiment/
 ├── producer/
 └── docker-compose.yml
 └── README.md
-'''
+```
 
 
 Step 3: Launch the Pipeline ⚙️
